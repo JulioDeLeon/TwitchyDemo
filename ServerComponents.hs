@@ -14,71 +14,30 @@ import Control.Exception
 import Network
 import Control.Monad
 import Text.Printf
-import System.Serial
-import System.Posix.Terminal
+import ClientComponents
+import SerialComponents
 
--- ---------------------------------------------------------------------------
--- Data structures and initialisation
-
--- <<Client
-type ClientName = String
-
-data Client = Client
-  { clientName     :: ClientName
-  , clientHandle   :: Handle
-  , clientKicked   :: TVar (Maybe String)
-  , clientSendChan :: TChan Message
-  }
--- >>
-
--- <<newClient
-newClient :: ClientName -> Handle -> STM Client
-newClient name handle = do
-  c <- newTChan
-  k <- newTVar Nothing
-  return Client { clientName     = name
-                , clientHandle   = handle
-                , clientSendChan = c
-                , clientKicked   = k
-                }
--- >>
-
--- <<Server
 data Server = Server
-  { clients :: TVar (Map ClientName Client)
-  
+  { clients      :: TVar (Map ClientName Client)
+  , serialHandle :: TVar Handle --This could be switched out for a Serial Manager
   }
 
 newServer :: IO Server
 newServer = do
   c <- newTVarIO Map.empty
-  return Server { clients = c }
--- >>
+  sh <- newSerialHandle >>= (\h -> newTVarIO h)
+  return Server { clients = c, serialHandle = sh}
 
--- <<Message
-data Message = Notice String
-             | Tell ClientName String
-             | Broadcast ClientName String
-             | Command String
--- >>
 
--- -----------------------------------------------------------------------------
--- Basic operations
-
--- <<broadcast
 broadcast :: Server -> Message -> STM ()
 broadcast Server{..} msg = do
   clientmap <- readTVar clients
   mapM_ (\client -> sendMessage client msg) (Map.elems clientmap)
--- >>
 
--- <<sendMessage
 sendMessage :: Client -> Message -> STM ()
 sendMessage Client{..} msg =
   writeTChan clientSendChan msg
--- >>
 
--- <<sendToName
 sendToName :: Server -> ClientName -> Message -> STM Bool
 sendToName server@Server{..} name msg = do
   clientmap <- readTVar clients
@@ -104,35 +63,29 @@ kick server@Server{..} who by = do
       writeTVar (clientKicked victim) $ Just ("by " ++ by)
       void $ sendToName server by (Notice $ "you kicked " ++ who)
 
--- -----------------------------------------------------------------------------
--- The main server
 
 talk :: Handle -> Server -> IO ()
 talk handle server@Server{..} = do
   hSetNewlineMode handle universalNewlineMode
-      -- Swallow carriage returns sent by telnet clients
+      
   hSetBuffering handle LineBuffering
   readName
  where
--- <<readName
   readName = do
     hPutStrLn handle "What is your name?"
     name <- hGetLine handle
     if null name
       then readName
-      else mask $ \restore -> do        -- <1>
+      else mask $ \restore -> do       
              ok <- checkAddClient server name handle
              case ok of
-               Nothing -> restore $ do  -- <2>
+               Nothing -> restore $ do  
                   hPrintf handle
                      "The name %s is in use, please choose another\n" name
                   readName
                Just client ->
-                  restore (runClient server client) -- <3>
-                      `finally` removeClient server name
--- >>
+                  restore (runClient server client) >> removeClient server name
 
--- <<checkAddClient
 checkAddClient :: Server -> ClientName -> Handle -> IO (Maybe Client)
 checkAddClient server@Server{..} name handle = atomically $ do
   clientmap <- readTVar clients
@@ -142,16 +95,12 @@ checkAddClient server@Server{..} name handle = atomically $ do
             writeTVar clients $ Map.insert name client clientmap
             broadcast server  $ Notice (name ++ " has connected")
             return (Just client)
--- >>
 
--- <<removeClient
 removeClient :: Server -> ClientName -> IO ()
 removeClient server@Server{..} name = atomically $ do
   modifyTVar' clients $ Map.delete name
   broadcast server $ Notice (name ++ " has disconnected")
--- >>
 
--- <<runClient
 runClient :: Server -> Client -> IO ()
 runClient serv@Server{..} client@Client{..} = do
   race server receive
@@ -171,9 +120,7 @@ runClient serv@Server{..} client@Client{..} = do
         return $ do
             continue <- handleMessage serv client msg
             when continue $ server
--- >>
 
--- <<handleMessage
 handleMessage :: Server -> Client -> Message -> IO Bool
 handleMessage server client@Client{..} message =
   case message of
@@ -198,4 +145,7 @@ handleMessage server client@Client{..} message =
                return True
  where
    output s = do hPutStrLn clientHandle s; return True
--- >>
+   
+   
+   
+
