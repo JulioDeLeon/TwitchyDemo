@@ -4,14 +4,17 @@ module SerialComponents ( newSerialHandle
 import System.IO
 import System.Serial
 import System.Posix.Terminal
+import Control.Concurrent
 
 newSerialHandle :: IO Handle
 newSerialHandle = do
 	openSerial dev br ws sb par fc
 	where
-		dev = "/dev/ttyS0"
+		dev = "/dev/ttyAMA0"
 		br  = B9600
 		ws  = 8
 		sb  = One
 		par = NoParity
 		fc  = NoFlowControl
+		
+

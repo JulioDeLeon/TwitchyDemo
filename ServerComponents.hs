@@ -16,18 +16,20 @@ import Control.Monad
 import Text.Printf
 import ClientComponents
 import SerialComponents
+import qualified Data.CaseInsensitive as CI
 
 data Server = Server
   { clients      :: TVar (Map ClientName Client)
   , serialHandle :: TVar Handle --This could be switched out for a Serial Manager
+  , serialQueue  :: TVar [String]
   }
-
+  
 newServer :: IO Server
 newServer = do
   c <- newTVarIO Map.empty
   sh <- newSerialHandle >>= (\h -> newTVarIO h)
-  return Server { clients = c, serialHandle = sh}
-
+  q <- newTVarIO []
+  return Server { clients = c, serialHandle = sh, serialQueue = q}
 
 broadcast :: Server -> Message -> STM ()
 broadcast Server{..} msg = do
@@ -44,7 +46,6 @@ sendToName server@Server{..} name msg = do
   case Map.lookup name clientmap of
     Nothing     -> return False
     Just client -> sendMessage client msg >> return True
--- >>
 
 tell :: Server -> Client -> ClientName -> String -> IO ()
 tell server@Server{..} Client{..} who msg = do
@@ -147,5 +148,30 @@ handleMessage server client@Client{..} message =
    output s = do hPutStrLn clientHandle s; return True
    
    
+sendToSerial :: Handle -> String -> IO ()
+sendToSerial h s = do return ()
    
 
+serialHandler :: Server -> Handle -> IO ()
+serialHandler s@Server{..} h = do
+	loop
+	where 
+		loop = do
+			threadDelay 500 --milliseconds
+			curList <- readTVarIO serialQueue
+			atomically $ writeTVar serialQueue []
+			--determine the most common commad
+			msg <- determineComm curList
+			--send the command to the string
+			loop
+			
+determineComm :: [String] -> IO String
+determineComm list = do
+	
+	
+	
+	
+	
+	
+	
+	
