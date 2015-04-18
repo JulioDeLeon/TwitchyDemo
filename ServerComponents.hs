@@ -175,6 +175,7 @@ serialHandler s@Server{..} h = do
 			threadDelay 500 --milliseconds
 			curList <- readTVarIO serialQueue
 			atomically $ writeTVar serialQueue []
+			mapM_ (\x ->putStrLn $ "value: " ++ x) curList
 			msg <- determineComm curList
 			--printf " <%s> to serial\n" msg
 			sendToSerial h msg
@@ -185,7 +186,8 @@ determineComm :: [[Char]] -> IO String
 determineComm list = do
 	if list == []
 		then return ("null")
-		else
+		else do
+			printf "L: %d, R: %d, F: %d, B: %d\n" leftC rightC forwardC backC;
 			case maximum [leftC, rightC, backC, forwardC] of
 				leftC -> return ("left")
 				rightC -> return ("right")
