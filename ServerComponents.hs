@@ -159,7 +159,12 @@ handleMessage server client@Client{..} message =
    
 sendToSerial :: Handle -> String -> IO ()
 sendToSerial h s = do 
-	hPutStr h s
+	if s == "null" 
+		then 
+			return ()
+		else 
+			putStrLn $  "sending " ++ s;
+			hPutStr h s
    
 
 serialHandler :: Server -> Handle -> IO ()
@@ -171,9 +176,10 @@ serialHandler s@Server{..} h = do
 			curList <- readTVarIO serialQueue
 			atomically $ writeTVar serialQueue []
 			msg <- determineComm curList
-			printf "Sending <%s> to serial\n" msg
+			--printf " <%s> to serial\n" msg
 			sendToSerial h msg
 			loop
+		
 			
 determineComm :: [[Char]] -> IO String
 determineComm list = do
