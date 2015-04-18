@@ -23,7 +23,7 @@ main = withSocketsDo $ do
 	sock <- listenOn (PortNumber (fromIntegral port))
 	printf "Listening on %d \n" port 
 	--start serial Handle here
-	
+	forkIO $ serialHandler server (serialHandle server)
 	--forever accept connections
 	forever $ do
 		(handle, host, port) <- accept sock

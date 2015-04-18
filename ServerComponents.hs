@@ -1,9 +1,10 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module ServerComponents ( newServer
+module ServerComponents ( Server(..)
+						, newServer
 						, talk
+						, serialHandler
 						) where
-
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Concurrent.Async
@@ -14,20 +15,20 @@ import Control.Exception
 import Network
 import Control.Monad
 import Text.Printf
+import Data.Char
 import ClientComponents
 import SerialComponents
-import qualified Data.CaseInsensitive as CI
 
 data Server = Server
   { clients      :: TVar (Map ClientName Client)
-  , serialHandle :: TVar Handle --This could be switched out for a Serial Manager
+  , serialHandle :: Handle --This could be switched out for a Serial Manager
   , serialQueue  :: TVar [String]
   }
   
 newServer :: IO Server
 newServer = do
   c <- newTVarIO Map.empty
-  sh <- newSerialHandle >>= (\h -> newTVarIO h)
+  sh <- newSerialHandle 
   q <- newTVarIO []
   return Server { clients = c, serialHandle = sh, serialQueue = q}
 
@@ -35,6 +36,11 @@ broadcast :: Server -> Message -> STM ()
 broadcast Server{..} msg = do
   clientmap <- readTVar clients
   mapM_ (\client -> sendMessage client msg) (Map.elems clientmap)
+  
+
+queueMessage :: Server -> String -> STM ()
+queueMessage Server{..} msg = do
+	modifyTVar serialQueue (\lst -> lst++[msg])
 
 sendMessage :: Client -> Message -> STM ()
 sendMessage Client{..} msg =
@@ -111,6 +117,7 @@ runClient serv@Server{..} client@Client{..} = do
     msg <- hGetLine clientHandle
     atomically $ sendMessage client (Command msg)
 
+	--what is join?
   server = join $ atomically $ do
     k <- readTVar clientKicked
     case k of
@@ -127,7 +134,9 @@ handleMessage server client@Client{..} message =
   case message of
      Notice msg         -> output $ "*** " ++ msg
      Tell name msg      -> output $ "*" ++ name ++ "*: " ++ msg
-     Broadcast name msg -> output $ "<" ++ name ++ ">: " ++ msg
+     Broadcast name msg -> do 
+       atomically $ queueMessage server msg
+       output $ "<" ++ name ++ ">: " ++ msg
      Command msg ->
        case words msg of
            ["/kick", who] -> do
@@ -149,7 +158,8 @@ handleMessage server client@Client{..} message =
    
    
 sendToSerial :: Handle -> String -> IO ()
-sendToSerial h s = do return ()
+sendToSerial h s = do 
+	hPutStr h s
    
 
 serialHandler :: Server -> Handle -> IO ()
@@ -160,17 +170,25 @@ serialHandler s@Server{..} h = do
 			threadDelay 500 --milliseconds
 			curList <- readTVarIO serialQueue
 			atomically $ writeTVar serialQueue []
-			--determine the most common commad
 			msg <- determineComm curList
-			--send the command to the string
+			printf "Sending <%s> to serial\n" msg
+			sendToSerial h msg
 			loop
 			
-determineComm :: [String] -> IO String
+determineComm :: [[Char]] -> IO String
 determineComm list = do
-	
-	
-	
-	
+	let leftC = length $ filter (\e-> if (map toLower e) == "left" then True else False) list
+	let rightC = length $ filter (\e-> if (map toLower e) == "right" then True else False) list
+	let backC = length $ filter (\e-> if (map toLower e) == "back" then True else False) list
+	let forwardC = length $ filter (\e-> if (map toLower e) == "forward" then True else False) list
+	case maximum [leftC, rightC, backC, forwardC] of
+		leftC -> return ("left")
+		rightC -> return ("right")
+		backC -> return ("back")
+		forwardC -> return ("forward")
+		otherwise -> return ("null")
+	-- do I have to worry about string sizes?
+
 	
 	
 	

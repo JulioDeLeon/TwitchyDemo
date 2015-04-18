@@ -9,8 +9,6 @@ module ClientComponents ( ClientName
 import Control.Concurrent.STM
 import System.IO
 
-
-
 type ClientName = String
 
 data Client = Client
