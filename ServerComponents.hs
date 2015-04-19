@@ -33,14 +33,19 @@ newServer = do
   return Server { clients = c, serialHandle = sh, serialQueue = q}
 
 broadcast :: Server -> Message -> STM ()
-broadcast Server{..} msg = do
+broadcast server@Server{..} msg = do
   clientmap <- readTVar clients
+  queueMessage server msg
   mapM_ (\client -> sendMessage client msg) (Map.elems clientmap)
   
 
-queueMessage :: Server -> String -> STM ()
-queueMessage Server{..} msg = do
-	modifyTVar serialQueue (\lst -> lst++[msg])
+queueMessage :: Server -> Message -> STM ()
+queueMessage Server{..} message = do
+	case message of
+		Notice msg         -> modifyTVar serialQueue (\lst -> lst)
+		Tell name msg      -> modifyTVar serialQueue (\lst -> lst)
+		Broadcast name msg -> modifyTVar serialQueue (\lst -> lst++[msg])
+		Command msg        -> modifyTVar serialQueue (\lst -> lst)
 
 sendMessage :: Client -> Message -> STM ()
 sendMessage Client{..} msg =
@@ -126,6 +131,7 @@ runClient serv@Server{..} client@Client{..} = do
       Nothing -> do
         msg <- readTChan clientSendChan
         return $ do
+            --atomically $ queueMessage server msg
             continue <- handleMessage serv client msg
             when continue $ server
 
@@ -135,7 +141,6 @@ handleMessage server client@Client{..} message =
      Notice msg         -> output $ "*** " ++ msg
      Tell name msg      -> output $ "*" ++ name ++ "*: " ++ msg
      Broadcast name msg -> do 
-       atomically $ queueMessage server msg
        output $ "<" ++ name ++ ">: " ++ msg
      Command msg ->
        case words msg of
