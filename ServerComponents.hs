@@ -188,17 +188,18 @@ determineComm list = do
 		then return ("null")
 		else do
 			printf "L: %d, R: %d, F: %d, B: %d\n" leftC rightC forwardC backC;
-			case maximum [leftC, rightC, backC, forwardC] of
-				leftC -> return ("left")
-				rightC -> return ("right")
-				backC -> return ("back")
-				forwardC -> return ("forward")
-				otherwise -> return ("null")
+			case max of 
+				[True,_,_,_] -> return ("left")
+				[False,True,_,_] -> return ("right")
+				[False,False,True,_] -> return ("back")
+				[False,False,False,True] -> return ("forward")
 	where
+		counts = [leftC, rightC, backC, forwardC]
 		leftC = length $ filter (\e-> if (map toLower e) == "left" then True else False) list
 		rightC = length $ filter (\e-> if (map toLower e) == "right" then True else False) list
 		backC = length $ filter (\e-> if (map toLower e) == "back" then True else False) list
 		forwardC = length $ filter (\e-> if (map toLower e) == "forward" then True else False) list
+		max =  map (\e -> e ==  (maximum  counts)) counts 
 	-- do I have to worry about string sizes?
 
 	
