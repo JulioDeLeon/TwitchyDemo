@@ -120,9 +120,10 @@ runClient serv@Server{..} client@Client{..} = do
  where
   receive = forever $ do
     msg <- hGetLine clientHandle
-    atomically $ sendMessage client (Command msg)
-
-	--what is join?
+    if msg /= "" 
+    	then atomically $ sendMessage client (Command msg)
+		else return ()
+		
   server = join $ atomically $ do
     k <- readTVar clientKicked
     case k of
@@ -180,7 +181,7 @@ serialHandler s@Server{..} h = do
 			threadDelay 500 --milliseconds
 			curList <- readTVarIO serialQueue
 			atomically $ writeTVar serialQueue []
-			mapM_ (\x ->putStrLn $ "value: " ++ x) curList
+			--mapM_ (\x ->putStrLn $ "value: " ++ x) curList
 			msg <- determineComm curList
 			--printf " <%s> to serial\n" msg
 			sendToSerial h msg
