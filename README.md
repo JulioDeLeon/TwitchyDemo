@@ -11,7 +11,8 @@ You can change this for whatever serial port you desire.
 This project was built and compiled in a raspberry pi. This means that it's GHC and cabal-install are not updated to the latest verions. So I did not have the luxury of setting up a cabal managed project. I would not be surprised that there is a work around as of yesterday. 
 
 Setup:
-<REREQS: ghc (version >= 7.4), cabal-install (version >= 1.14)>
+
+PREREQS: ghc (version >= 7.4), cabal-install (version >= 1.14)
 
 clone the repo into where ever.
 
@@ -20,7 +21,10 @@ ghc Main
 ./Main
 
 What needs to be improved for this project:
-Graceful exit of the program. (I'm lazy)
+
+Graceful exit of the program.
+
 More effective commenting. 
+
 cabal....
 
