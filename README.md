@@ -1,8 +1,7 @@
 # TwitchyDemo
 
 Background:
-This demo is my interpretation of what 'Gaming with Twitch' is implemented. The project is done in Haskell in full.
-It also shows a practical applications of both concepts in functional languages and functional languages themselves.
+This demo is my interpretation of what 'Gaming with Twitch' is implemented, there is a server which takes in user commands and sends the most popular command to control some character. However the 'character' for this project is a robot. Communication with the robot is done through serial/UART. The project acts like a chatroom for the most part. What functionallity that has been added is the server will use STMs to keep a queue which is filled with client requests. The server will the interpret the queue and send the most popular command to the robot. The project is done in Haskell in full, and shows a practical application of both concepts in functional languages and functional languages themselves.
 
 
 Note:
