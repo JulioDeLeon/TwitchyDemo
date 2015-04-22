@@ -14,7 +14,9 @@ Setup:
 <REREQS: ghc (version >= 7.4), cabal-install (version >= 1.14)>
 
 clone the repo into where ever.
+
 ghc Main
+
 ./Main
 
 What needs to be improved for this project:
