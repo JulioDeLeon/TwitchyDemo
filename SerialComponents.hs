@@ -10,7 +10,7 @@ newSerialHandle :: IO Handle
 newSerialHandle = do
 	openSerial dev br ws sb par fc
 	where
-		dev = "/dev/ttyAMA0"
+		dev = "/dev/ttyUSB0"
 		br  = B9600
 		ws  = 8
 		sb  = One

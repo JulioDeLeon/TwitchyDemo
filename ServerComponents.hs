@@ -170,8 +170,8 @@ sendToSerial h s = do
 			return ()
 		else 
 			putStrLn $  "sending " ++ s;
-			hPutStr h s
-   
+			hPutStr h s;
+   			hFlush h
 
 serialHandler :: Server -> Handle -> IO ()
 serialHandler s@Server{..} h = do
@@ -195,10 +195,10 @@ determineComm list = do
 		else do
 			printf "L: %d, R: %d, F: %d, B: %d\n" leftC rightC forwardC backC;
 			case max of 
-				[True,_,_,_] -> return ("left")
-				[False,True,_,_] -> return ("right")
-				[False,False,True,_] -> return ("back")
-				[False,False,False,True] -> return ("forward")
+				[True,_,_,_] -> return ("a")--left
+				[False,True,_,_] -> return ("d")--right
+				[False,False,True,_] -> return ("s")--back
+				[False,False,False,True] -> return ("w")--forward
 	where
 		counts = [leftC, rightC, backC, forwardC]
 		leftC = length $ filter (\e-> if (map toLower e) == "left" then True else False) list
